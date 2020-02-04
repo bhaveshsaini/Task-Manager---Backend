@@ -1,6 +1,7 @@
 const express = require('express')
 const User = require('../models/user')
 const auth = require ('../middleware/auth')
+const multer = require('multer')
 const router = new express.Router()
 
 //SIGN UP
@@ -94,6 +95,54 @@ router.delete('/users/me', auth, async (req, res) => {
 
 	} catch(error){
 		res.status(500).send(error)
+	}
+})
+
+//UPLOADING IMAGES
+const upload = multer({
+	// dest: 'profile pictures',
+	limits: {
+		fileSize: 100000
+	},
+	fileFilter(req, file, cb){
+		if(!file.originalname.match(/\.(jpg|png|JPG|PNG)$/))
+			return cb(new Error('This format is not supported'))
+
+		cb(undefined, true)
+	}
+})
+
+router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
+	req.user.avatar = req.file.buffer
+	await req.user.save()	
+	res.send('Successfully uploaded')
+}, (error, req, res, next) => {
+	res.status(400).send({ error: error.message })
+})
+
+//DELETING IMAGES
+router.delete('/users/avatar/delete', auth, async (req, res) => {
+	try{
+		req.user.avatar = undefined
+		await req.user.save()
+		res.send()
+} catch(error) {
+		res.status(500).send(error)
+	}
+})
+
+router.get('/users/:id/avatar', async (req, res) => {
+	try{
+		const user = await User.findById(req.params.id)
+
+		if(!user || !user.avatar)
+			throw new Error()
+
+		// res.set('Content-Type', 'image/jpg')
+		res.send(user.avatar)
+
+	} catch(error){
+		res.status(404).send()
 	}
 })
 
