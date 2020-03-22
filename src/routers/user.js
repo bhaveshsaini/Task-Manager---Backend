@@ -3,6 +3,7 @@ const User = require('../models/user')
 const auth = require ('../middleware/auth')
 const multer = require('multer')
 const router = new express.Router()
+const fs = require('fs')
 
 //SIGN UP
 router.post('/users', async (req, res) => {
@@ -11,10 +12,11 @@ router.post('/users', async (req, res) => {
 	try{
 		await user.save()
 		await user.generateAuthToken()
-		res.status(201).send(user)
+		res.send(user)
 	} catch(error){
-		res.status(400).send(error)
+		res.send(error)
 	}
+
 	
 })
 
@@ -22,22 +24,20 @@ router.post('/users', async (req, res) => {
 router.post('/users/login', async (req, res) => {
 	try{
 		const user = await User.findByCredentials(req.body.email, req.body.password)
-		const token = await user.generateAuthToken()
-		res.send({ user, token })
+		await user.generateAuthToken()
+		res.send({user})
 	} catch(error){
-		res.send('error')
+		res.send(error)
 	}
 })
 
 //LOGOUT
 router.post('/users/logout', auth, async (req, res) => {
 	try{
-		req.user.tokens = req.user.tokens.filter((token) => {
-			return token.token !== req.token
-		})
-		await req.user.save()
+	req.user.token = ''
+	await req.user.save()
 
-		res.send('You have been logged out')
+	res.send('You have been logged out')
 
 	} catch(error){
 		res.status(500).send()
@@ -67,7 +67,7 @@ router.get('/users/me', auth, async (req, res) => {
 //UPDATE USER
 router.patch('/users/me', auth, async (req, res) => {
 	const updates = Object.keys(req.body)
-	const allowedUpdates = ['name', 'email', 'password', 'age']
+	const allowedUpdates = ['firstname', 'lastname', 'email', 'password', 'age']
 	const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
 	if(!isValidOperation)
@@ -91,55 +91,86 @@ router.patch('/users/me', auth, async (req, res) => {
 router.delete('/users/me', auth, async (req, res) => {
 	try{
 		await req.user.remove()
-		res.send('Deleted')
 
+		// delete user profile picture when they delete their account
+		const filePath = `/Users/bhaveshsaini/Desktop/Bhavesh Saini/Web apps/TaskManager/profilePictures/${req.user._id}.jpg`
+		fs.unlink(filePath, (err) => {
+			if(err){
+				return
+			}
+		})
+
+		res.send('done')
 	} catch(error){
-		res.status(500).send(error)
+		res.send(error)
 	}
 })
 
+
 //UPLOADING IMAGES
-const upload = multer({
-	// dest: 'profile pictures',
-	limits: {
-		fileSize: 100000
-	},
+
+const storage = multer.diskStorage({
+	destination: 'profilePictures',
+	// limits: {
+	// 	fileSize: 10000000
+	// },
 	fileFilter(req, file, cb){
 		if(!file.originalname.match(/\.(jpg|png|JPG|PNG)$/))
 			return cb(new Error('This format is not supported'))
 
 		cb(undefined, true)
-	}
+	},
+
+    filename: function (req, file, cb) {
+    	cb(null, file.originalname);
+  }
 })
 
+const upload = multer({ storage: storage })
+ 
 router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
-	req.user.avatar = req.file.buffer
-	await req.user.save()	
-	res.send('Successfully uploaded')
+
+	const user = req.user
+	user.avatar = req.file.originalname
+	await user.save()
+	res.status(200).send()
 }, (error, req, res, next) => {
-	res.status(400).send({ error: error.message })
+	res.send({ error: error.message })
 })
 
 //DELETING IMAGES
 router.delete('/users/avatar/delete', auth, async (req, res) => {
 	try{
-		req.user.avatar = undefined
+		req.user.avatar = 'https://i.stack.imgur.com/34AD2.jpg'
 		await req.user.save()
-		res.send()
-} catch(error) {
-		res.status(500).send(error)
-	}
+
+		const filePath = `/Users/bhaveshsaini/Desktop/Bhavesh Saini/Web apps/TaskManager/profilePictures/${req.user._id}.jpg`
+		fs.unlink(filePath, (err) => {
+			if(err){
+				return
+			}
+		})
+
+		res.status(200).send()
+	} catch(error) {
+			res.status(500).send(error)
+		}
 })
 
-router.get('/users/:id/avatar', async (req, res) => {
+//RETURN IMAGES
+router.get('/users/avatar', auth, async (req, res) => {
 	try{
-		const user = await User.findById(req.params.id)
+		const user = await User.findById(req.user._id)
 
-		if(!user || !user.avatar)
+		if(!user)
 			throw new Error()
 
-		// res.set('Content-Type', 'image/jpg')
-		res.send(user.avatar)
+		if(user.avatar === 'https://i.stack.imgur.com/34AD2.jpg')
+			res.send(user.avatar)
+		else{
+			const imagePath = `http://localhost/${req.user.avatar}`
+	   		res.send(imagePath)
+		}
 
 	} catch(error){
 		res.status(404).send()

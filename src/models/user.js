@@ -5,15 +5,21 @@ const jwt = require('jsonwebtoken')
 const Task = require('./task')
 
 const userSchema = new mongoose.Schema({
-	name: {
+	firstname: {
 		type: String,
 		required: true,
-		trim: true
+		trim: true,
+	},
+
+	lastname: {
+		type: String,
+		required: true,
+		trim: true,
 	},
 
 	password: {
 		type: String,
-		required: true,
+		// required: true,
 		trim: true,
 		validate(value)
 		{
@@ -44,7 +50,7 @@ const userSchema = new mongoose.Schema({
 
 	age: {
 		type: Number,
-		default: 0,
+		default: null,
 		validate(value)
 		{
 			if(value < 0)
@@ -54,14 +60,13 @@ const userSchema = new mongoose.Schema({
 		}
 	},
 
-	tokens: [{
-		token: {
-			type: String,
-			required: true
-		}
-	}],
+	token:{
+			type: String
+	},
+
 	avatar: {
-		type: Buffer
+		type: String,
+		default: 'https://i.stack.imgur.com/34AD2.jpg'
 	}
 
 }, {
@@ -90,14 +95,17 @@ userSchema.methods.generateAuthToken = async function()
 {
 	const user = this
 	const token = jwt.sign({_id: user._id.toString()}, 'thisismynewcourse')
-	
-	user.tokens = user.tokens.concat({token})
+	user.token = token
 	await user.save()
+	
+	// user.tokens = user.tokens.concat({token})
+	// await user.save()
 
-	return token
+	// return token // dont need to send back token, since already sending back user info
 }
 
-userSchema.statics.findByCredentials = async (email, password) => {
+
+userSchema.statics.findByCredentials = async ( email, password ) => {
 	const user = await User.findOne({ email })
 
 	if(!user)
@@ -111,7 +119,17 @@ userSchema.statics.findByCredentials = async (email, password) => {
 	return user
 }
 
-//hash plain text password before saving
+// Capitalize first letter of name before saving
+userSchema.pre('save', async function(next){
+	const user = this
+
+	user.firstname = user.firstname.charAt(0).toUpperCase() + user.firstname.slice(1)
+	user.lastname = user.lastname.charAt(0).toUpperCase() + user.lastname.slice(1)
+
+    next()
+})
+
+// hash plain text password before saving
 userSchema.pre('save', async function(next) {
 	const user = this
 
