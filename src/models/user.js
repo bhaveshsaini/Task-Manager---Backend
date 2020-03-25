@@ -65,6 +65,10 @@ const userSchema = new mongoose.Schema({
 	},
 
 	avatar: {
+		type: String
+	},
+
+	avatarURL: {
 		type: String,
 		default: 'https://i.stack.imgur.com/34AD2.jpg'
 	}

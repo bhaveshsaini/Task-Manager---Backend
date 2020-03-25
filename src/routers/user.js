@@ -3,7 +3,13 @@ const User = require('../models/user')
 const auth = require ('../middleware/auth')
 const multer = require('multer')
 const router = new express.Router()
-const fs = require('fs')
+const cloud = require('cloudinary').v2
+
+cloud.config({
+	cloud_name: 'dg0fmkntf',
+	api_key: '327837998681768',
+	api_secret: 'EkFmYCFXNGlzm0O2HeOZpRIMXF4'
+})
 
 //SIGN UP
 router.post('/users', async (req, res) => {
@@ -110,7 +116,7 @@ router.delete('/users/me', auth, async (req, res) => {
 //UPLOADING IMAGES
 
 const storage = multer.diskStorage({
-	destination: 'profilePictures',
+	// destination: 'profilePictures',
 	// limits: {
 	// 	fileSize: 10000000
 	// },
@@ -129,9 +135,21 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage })
  
 router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
-
+	const file = req.file
 	const user = req.user
-	user.avatar = req.file.originalname
+
+	if(user.avatarURL != 'https://i.stack.imgur.com/34AD2.jpg')
+	{
+		cloud.uploader.destroy(user.avatar)
+	}
+
+	await cloud.uploader.upload(file.path, 
+		{ public_id: req.file.originalname }, 
+		function(e, res) {
+			user.avatarURL = res.secure_url
+		})
+
+	user.avatar = file.originalname
 	await user.save()
 	res.status(200).send()
 }, (error, req, res, next) => {
@@ -141,15 +159,10 @@ router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
 //DELETING IMAGES
 router.delete('/users/avatar/delete', auth, async (req, res) => {
 	try{
-		req.user.avatar = 'https://i.stack.imgur.com/34AD2.jpg'
+		cloud.uploader.destroy(user.avatar)
+		req.user.avatarURL = 'https://i.stack.imgur.com/34AD2.jpg'
+		req.user.avatar = null
 		await req.user.save()
-
-		const filePath = `/Users/bhaveshsaini/Desktop/Bhavesh Saini/Web apps/TaskManager/profilePictures/${req.user._id}.jpg`
-		fs.unlink(filePath, (err) => {
-			if(err){
-				return
-			}
-		})
 
 		res.status(200).send()
 	} catch(error) {
@@ -165,11 +178,10 @@ router.get('/users/avatar', auth, async (req, res) => {
 		if(!user)
 			throw new Error()
 
-		if(user.avatar === 'https://i.stack.imgur.com/34AD2.jpg')
-			res.send(user.avatar)
+		if(user.avatarURL === 'https://i.stack.imgur.com/34AD2.jpg')
+			res.send(user.avatarURL)
 		else{
-			const imagePath = `http://localhost/${req.user.avatar}`
-	   		res.send(imagePath)
+	   		res.send(req.user.avatarURL)
 		}
 
 	} catch(error){
