@@ -26,7 +26,7 @@ router.post('/users', async (req, res) => {
 		res.send(error)
 	}
 
-	
+
 })
 
 //LOGIN
