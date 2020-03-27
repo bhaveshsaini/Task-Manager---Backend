@@ -6,9 +6,9 @@ const router = new express.Router()
 const cloud = require('cloudinary').v2
 
 cloud.config({
-	cloud_name: 'dg0fmkntf',
-	api_key: '327837998681768',
-	api_secret: 'EkFmYCFXNGlzm0O2HeOZpRIMXF4'
+	cloud_name: process.env.cloud_name,
+	api_key: process.env.api_key,
+	api_secret: process.env.api_secret
 })
 
 //SIGN UP
@@ -23,7 +23,7 @@ router.post('/users', async (req, res) => {
 		res.send(error)
 	}
 
-	
+
 })
 
 //LOGIN
@@ -99,14 +99,9 @@ router.delete('/users/me', auth, async (req, res) => {
 		await req.user.remove()
 
 		// delete user profile picture when they delete their account
-		const filePath = `/Users/bhaveshsaini/Desktop/Bhavesh Saini/Web apps/TaskManager/profilePictures/${req.user._id}.jpg`
-		fs.unlink(filePath, (err) => {
-			if(err){
-				return
-			}
-		})
+		await cloud.uploader.destroy(req.user.avatar)
 
-		res.send('done')
+		res.status(200).send()
 	} catch(error){
 		res.send(error)
 	}
@@ -159,14 +154,14 @@ router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
 //DELETING IMAGES
 router.delete('/users/avatar/delete', auth, async (req, res) => {
 	try{
-		cloud.uploader.destroy(user.avatar)
+		await cloud.uploader.destroy(req.user.avatar)
 		req.user.avatarURL = 'https://i.stack.imgur.com/34AD2.jpg'
 		req.user.avatar = null
 		await req.user.save()
 
 		res.status(200).send()
 	} catch(error) {
-			res.status(500).send(error)
+			res.send(error)
 		}
 })
 
