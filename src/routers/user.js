@@ -162,7 +162,7 @@ router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
 //DELETING IMAGES
 router.delete('/users/avatar/delete', auth, async (req, res) => {
 	try{
-		cloud.uploader.destroy(user.avatar)
+		await cloud.uploader.destroy(user.avatar)
 		req.user.avatarURL = 'https://i.stack.imgur.com/34AD2.jpg'
 		req.user.avatar = null
 		await req.user.save()
