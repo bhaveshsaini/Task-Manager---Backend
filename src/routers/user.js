@@ -99,14 +99,9 @@ router.delete('/users/me', auth, async (req, res) => {
 		await req.user.remove()
 
 		// delete user profile picture when they delete their account
-		const filePath = `/Users/bhaveshsaini/Desktop/Bhavesh Saini/Web apps/TaskManager/profilePictures/${req.user._id}.jpg`
-		fs.unlink(filePath, (err) => {
-			if(err){
-				return
-			}
-		})
+		await cloud.uploader.destroy(req.user.avatar)
 
-		res.send('done')
+		res.status(200).send()
 	} catch(error){
 		res.send(error)
 	}
@@ -159,7 +154,7 @@ router.post('/users/upload', auth, upload.single('pic'), async (req, res) => {
 //DELETING IMAGES
 router.delete('/users/avatar/delete', auth, async (req, res) => {
 	try{
-		await cloud.uploader.destroy(user.avatar)
+		await cloud.uploader.destroy(req.user.avatar)
 		req.user.avatarURL = 'https://i.stack.imgur.com/34AD2.jpg'
 		req.user.avatar = null
 		await req.user.save()
