@@ -180,7 +180,7 @@ router.get('/users/avatar', auth, async (req, res) => {
 		}
 
 	} catch(error){
-		res.status(404).send('failed!!!')
+		res.status(404).send()
 	}
 })
 
