@@ -6,9 +6,12 @@ const router = new express.Router()
 const cloud = require('cloudinary').v2
 
 cloud.config({
-	cloud_name: // YOUR API NAME,
-	api_key: // YOUR API KEY,
-	api_secret: // YOUR API SECRET
+	cloud_name: 'dg0fmkntf',
+	api_key: '327837998681768',
+	api_secret: 'EkFmYCFXNGlzm0O2HeOZpRIMXF4'
+// 	cloud_name: // YOUR API NAME,
+// 	api_key: // YOUR API KEY,
+// 	api_secret: // YOUR API SECRET
 })
 
 //SIGN UP
@@ -166,7 +169,7 @@ router.delete('/users/avatar/delete', auth, async (req, res) => {
 
 		res.status(200).send()
 	} catch(error) {
-			res.status(500).send(error)
+			res.send(error)
 		}
 })
 
